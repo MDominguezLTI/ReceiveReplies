@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "LTI_SMS_Test_Azure_Function": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7052",
+      "launchBrowser": false
+    }
+  }
+}
