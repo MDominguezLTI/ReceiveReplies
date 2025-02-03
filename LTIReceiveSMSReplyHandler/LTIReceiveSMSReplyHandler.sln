@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35027.167
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReceiveReplyFromSMSAzureFunction", "ReceiveReplyFromSMSAzureFunction\ReceiveReplyFromSMSAzureFunction.csproj", "{B182CDA0-53E7-4452-9409-A40A0D504CB2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LTIReceiveSMSReplyHandler", "LTIReceiveSMSReplyHandler\LTIReceiveSMSReplyHandler.csproj", "{7A419D39-5756-4A21-AA63-BD56823C653F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B182CDA0-53E7-4452-9409-A40A0D504CB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B182CDA0-53E7-4452-9409-A40A0D504CB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B182CDA0-53E7-4452-9409-A40A0D504CB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B182CDA0-53E7-4452-9409-A40A0D504CB2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A419D39-5756-4A21-AA63-BD56823C653F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A419D39-5756-4A21-AA63-BD56823C653F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A419D39-5756-4A21-AA63-BD56823C653F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A419D39-5756-4A21-AA63-BD56823C653F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {513633D0-C135-42EB-B92B-7DD583E25671}
+		SolutionGuid = {040C7E32-D58B-4AE6-90E8-0C480FB8F848}
 	EndGlobalSection
 EndGlobal

@@ -6,9 +6,9 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Azure.Messaging.EventGrid;
-using Microsoft.Azure.WebJobs.Extensions.EventGrid;
 using System.Net.Http;
 using System.Net.Mail;
+using Microsoft.Azure.Functions.Worker;
 
 public static class ReceiveSmsFunction
 {
@@ -57,7 +57,7 @@ public static class ReceiveSmsFunction
 		try
 		{
 			// Create SMS client with connection string and send the message
-			SmsClient smsClient = new SmsClient("endpoint=https://ltiazurecommsresource.unitedstates.communication.azure.com/;accesskey=YOUR_ACCESS_KEY");
+			SmsClient smsClient = new SmsClient("endpoint=https://ltiazurecommsresource.unitedstates.communication.azure.com/;accesskey=8DSes5xa4F1dvyFFJCMQUPxFjCU5jWTOT6vSpQnLZHPhkEcwVRh7JQQJ99AKACULyCpUrFFTAAAAAZCSPXtN");
 			var response = await smsClient.SendAsync(
 				from: "+18772246875", // Replace with your sender number
 				to: recipient,
