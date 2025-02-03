@@ -1,80 +1,111 @@
 using System;
-using System.IO;
-using System.Threading.Tasks;
-using Azure.Communication.Sms;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Azure.Messaging.EventGrid;
-using System.Net.Http;
-using System.Net.Mail;
+using Azure.Messaging;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Logging;
+using Azure.Communication.Sms;
+using Newtonsoft.Json;
 
-public static class ReceiveSmsFunction
+namespace FunctionApp1
 {
-	private static readonly HttpClient _httpClient = new HttpClient();
-
-	// EventGridTrigger to listen to Event Grid events
-	[FunctionName("ReceiveSmsFunction")]
-	public static async Task Run(
-		[EventGridTrigger] EventGridEvent eventGridEvent, // EventGridTrigger to bind event data
-		ILogger log)
+	public class SMSReceiveReply
 	{
-		log.LogInformation("Received an SMS notification.");
+		private readonly ILogger<SMSReceiveReply> _logger;
+		private readonly SmsClient _smsClient;
 
-		// Deserialize the event data
-		if (eventGridEvent.EventType == "Microsoft.Communication.SMSReceived")
+		public SMSReceiveReply(ILogger<SMSReceiveReply> logger)
 		{
-			var smsMessage = JsonConvert.DeserializeObject<SmsReceivedEventData>(eventGridEvent.Data.ToString());
-			string sentPhoneNumber = smsMessage.From;
-			string phoneNumber = sentPhoneNumber.Substring(2);  // Adjust phone number format as needed
+			_logger = logger;
+			// Initialize the SMS Client with your Azure Communication Services connection string
+			_smsClient = new SmsClient("endpoint=https://ltiazurecommsresource.unitedstates.communication.azure.com/;accesskey=8DSes5xa4F1dvyFFJCMQUPxFjCU5jWTOT6vSpQnLZHPhkEcwVRh7JQQJ99AKACULyCpUrFFTAAAAAZCSPXtN");
+		}
 
-			log.LogInformation($"Received SMS from {sentPhoneNumber}: {smsMessage.Message}");
+		[Function(nameof(SMSReceiveReply))]
+		public void Run([EventGridTrigger] CloudEvent cloudEvent)
+		{
+			_logger.LogInformation("Event type: {type}, Event subject: {subject}", cloudEvent.Type, cloudEvent.Subject);
 
-			// Check if the message is "STOP" and send a confirmation SMS
-			if (smsMessage.Message.Trim().ToUpper() == "STOP")
+			// Check if the event is an SMS received event
+			if (cloudEvent.Type == "Microsoft.Communication.SMSReceived")
 			{
-				bool isSMSSent = await SendSMSAsync(sentPhoneNumber, "You have been successfully opted-out of notifications!");
-				if (!isSMSSent)
+				// Deserialize the event data into the SMS data object
+				var smsEvent = JsonConvert.DeserializeObject<SmsReceivedEventData>(cloudEvent.Data.ToString());
+
+				if (smsEvent != null)
 				{
-					log.LogError("Error: SMS sending failed!");
+					string senderPhoneNumber = smsEvent.From;
+					string message = smsEvent.Message?.Trim().ToUpper();  // Trim and convert to upper case
+
+					_logger.LogInformation($"Received SMS from {senderPhoneNumber}: {message}");
+
+					// Check if the message is "STOP"
+					if (message == "STOP")
+					{
+						// Send opt-out confirmation message
+						string optOutMessage = "You have been successfully opted-out of notifications!";
+						var isMessageSent = SendSMS(senderPhoneNumber, optOutMessage);
+
+						if (isMessageSent)
+						{
+							_logger.LogInformation("Opt-out confirmation SMS sent successfully.");
+						}
+						else
+						{
+							_logger.LogError("Failed to send opt-out confirmation SMS.");
+						}
+					}
+					else
+					{
+						// Send "We received your message" response
+						string responseMessage = $"We received your message: '{smsEvent.Message}'";
+						var isMessageSent = SendSMS(senderPhoneNumber, responseMessage);
+
+						if (isMessageSent)
+						{
+							_logger.LogInformation("Response SMS sent successfully.");
+						}
+						else
+						{
+							_logger.LogError("Failed to send response SMS.");
+						}
+					}
+				}
+				else
+				{
+					_logger.LogWarning("The received event data could not be deserialized.");
 				}
 			}
 			else
 			{
-				log.LogWarning("Invalid Message Received");
+				_logger.LogWarning($"Unhandled Event Type: {cloudEvent.Type}");
 			}
 		}
-		else
-		{
-			log.LogWarning($"Unhandled Event Type: {eventGridEvent.EventType}");
-		}
-	}
 
-	// Method to send SMS confirmation
-	private static async Task<bool> SendSMSAsync(string recipient, string message)
-	{
-		try
+		// Method to send SMS response back to the user
+		private bool SendSMS(string recipient, string message)
 		{
-			// Create SMS client with connection string and send the message
-			SmsClient smsClient = new SmsClient("endpoint=https://ltiazurecommsresource.unitedstates.communication.azure.com/;accesskey=8DSes5xa4F1dvyFFJCMQUPxFjCU5jWTOT6vSpQnLZHPhkEcwVRh7JQQJ99AKACULyCpUrFFTAAAAAZCSPXtN");
-			var response = await smsClient.SendAsync(
-				from: "+18772246875", // Replace with your sender number
-				to: recipient,
-				message: message
-			);
-			return response.Value.Successful;
-		}
-		catch (Exception ex)
-		{
-			return false;
-		}
-	}
+			try
+			{
+				// Replace with your actual sender number
+				var response = _smsClient.SendAsync(
+					from: "+18772246875",  // Your sender number here
+					to: recipient,
+					message: message
+				).Result;
 
-	// Class to handle the SMS event data
-	public class SmsReceivedEventData
-	{
-		public string From { get; set; }
-		public string Message { get; set; }
+				return response.Value.Successful;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError($"Error sending SMS: {ex.Message}");
+				return false;
+			}
+		}
+
+		// Class to handle the deserialized event data
+		public class SmsReceivedEventData
+		{
+			public string From { get; set; }
+			public string Message { get; set; }
+		}
 	}
 }

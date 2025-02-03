@@ -1,5 +1,10 @@
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Azure.Functions.Worker.Extensions.EventGrid;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Azure.Messaging.EventGrid;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
