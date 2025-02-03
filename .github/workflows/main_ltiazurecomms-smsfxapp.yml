@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # Path to your web app project, defaults to the repository root
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: './LTI_Receive_Reply_From_SMS' # Path to your web app project, defaults to the repository root
   DOTNET_VERSION: '8.0.x'             # Specify the exact dotnet version format
 
 jobs:
