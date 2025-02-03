@@ -12,14 +12,17 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Azure.Messaging.EventGrid;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Functions.Worker;
 
 public static class ReceiveSmsFunction
 {
 	private static readonly HttpClient _httpClient = new HttpClient();
 
-	[FunctionName("ReceiveSmsFunction")]
+	[Function("ReceiveSmsFunction")]
 	public static async Task<IActionResult> Run(
-		[HttpTrigger(AuthorizationLevel.Function, "post", Route = "notifications/received-reply")] HttpRequest req,
+		[Microsoft.Azure.Functions.Worker.HttpTrigger(Microsoft.Azure.Functions.Worker.AuthorizationLevel.Function, "post", Route = "notifications/received-reply")] HttpRequest req,
 		ILogger log)
 	{
 		log.LogInformation("Received an SMS notification.");
@@ -64,7 +67,7 @@ public static class ReceiveSmsFunction
 		{
 			SmsClient smsClient = new SmsClient("endpoint=https://ltiazurecommsresource.unitedstates.communication.azure.com/;accesskey=8DSes5xa4F1dvyFFJCMQUPxFjCU5jWTOT6vSpQnLZHPhkEcwVRh7JQQJ99AKACULyCpUrFFTAAAAAZCSPXtN");
 			var response = await smsClient.SendAsync(
-				from: "+18772246875", // Replace with your sender number
+				from: "+18772246875",
 				to: recipient,
 				message: message
 			);

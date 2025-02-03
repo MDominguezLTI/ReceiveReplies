@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "LTI_SMS_Test_Azure_Function": {
+    "LTI_Receive_Reply_From_SMS": {
       "commandName": "Project",
-      "commandLineArgs": "--port 7052",
+      "commandLineArgs": "--port 7132",
       "launchBrowser": false
     }
   }
