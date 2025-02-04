@@ -38,7 +38,7 @@ namespace FunctionApp1
 					_logger.LogInformation($"Received SMS from {senderPhoneNumber}: {message}");
 
 					// Check if the message is "STOP"
-					if (message == "STOP")
+					if (message == "OPT-OUT")
 					{
 						// Send opt-out confirmation message
 						string optOutMessage = "You have been successfully opted-out of notifications!";
