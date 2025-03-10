@@ -19,8 +19,11 @@ namespace FunctionApp1
             _logger = logger;
 
             // Read the connection string and sender number from appsettings.json
-            string connectionString = configuration["AzureCommunicationServices:ConnectionString"];
-            _fromNumber = configuration["AzureCommunicationServices:FromNumber"];
+            //string connectionString = configuration["AzureCommunicationServices:ConnectionString"];
+            //_fromNumber = configuration["AzureCommunicationServices:FromNumber"];
+            string connectionString = "endpoint=https://ltiazurecommsresource.unitedstates.communication.azure.com/;accesskey=8DSes5xa4F1dvyFFJCMQUPxFjCU5jWTOT6vSpQnLZHPhkEcwVRh7JQQJ99AKACULyCpUrFFTAAAAAZCSPXtN";
+            _fromNumber = "+18772246875";
+
 
             if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(_fromNumber))
             {
