@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: './LTIReceiveSMSReplyHandler' # set this to the path to your web app project, defaults to the repository root
-  DOTNET_VERSION: '8.0.x' # set this to the dotnet version to use
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
+  DOTNET_VERSION: '8' # set this to the dotnet version to use
 
 jobs:
   build-and-deploy:
@@ -40,6 +40,6 @@ jobs:
           app-name: 'LtiAzureComms-SmsFxApp'
           slot-name: 'Production'
           package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D42A4DE060CF4A1F9B3DD9C77248A97D }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_ED0008B44D6F4B5D8EC0E0DAC37A0280 }}
           sku: 'flexconsumption'
         
