@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Azure.Communication.Sms;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Azure.Core;
 
 namespace FunctionApp1
 {
@@ -65,6 +66,18 @@ namespace FunctionApp1
                     {
                         string helpMessage = "To opt-out of LTI Notifications, text OPT-OUT. Avoid texting STOP to stay connected. If you accidentally text STOP, follow the instructions to opt back in.";
                         if (SendSMS(senderPhoneNumber, helpMessage))
+                        {
+                            _logger.LogInformation("HELP message SMS sent successfully.");
+                        }
+                        else
+                        {
+                            _logger.LogError("Failed to send HELP message SMS.");
+                        }
+                    }
+                    else
+                    {
+                        string debugging = $"You texted: {message}";
+                        if (SendSMS(senderPhoneNumber, debugging))
                         {
                             _logger.LogInformation("HELP message SMS sent successfully.");
                         }
