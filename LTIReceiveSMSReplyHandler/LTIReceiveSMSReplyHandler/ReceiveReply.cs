@@ -6,19 +6,23 @@ using Azure.Communication.Sms;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Azure.Core;
+using PhoneNumbers;
+using LTIReceiveSMSReplyHandler.Services.DataAccess;
+using System.Net.Mail;
 
 namespace FunctionApp1
 {
     public class SMSReceiveReply
     {
         private readonly ILogger<SMSReceiveReply> _logger;
+        private readonly DatabaseServices _dbServices;
         private readonly SmsClient _smsClient;
         private readonly string _fromNumber;
 
-        public SMSReceiveReply(ILogger<SMSReceiveReply> logger, IConfiguration configuration)
+        public SMSReceiveReply(ILogger<SMSReceiveReply> logger, IConfiguration configuration, DatabaseServices dbServices)
         {
             _logger = logger;
-
+            _dbServices = dbServices;
             // Read the connection string and sender number from appsettings.json
             string connectionString = configuration["AzureCommunicationServices.ConnectionString"];
             _fromNumber = configuration["AzureCommunicationServices.FromNumber"];
@@ -33,7 +37,7 @@ namespace FunctionApp1
         }
 
         [Function(nameof(SMSReceiveReply))]
-        public void Run([EventGridTrigger] CloudEvent cloudEvent)
+        public async Task Run([EventGridTrigger] CloudEvent cloudEvent)
         {
             _logger.LogInformation("Event type: {type}, Event subject: {subject}", cloudEvent.Type, cloudEvent.Subject);
 
@@ -45,18 +49,69 @@ namespace FunctionApp1
                 {
                     string senderPhoneNumber = smsEvent.From;
                     string message = smsEvent.Message?.Trim().ToUpper();
+                    string dbPhoneNumber = senderPhoneNumber.Substring(2);
 
+                    await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply] Received SMS reply", null, null);
                     _logger.LogInformation($"Received SMS from {senderPhoneNumber}: {message}");
+                    
 
+                    //Validating Phone Number:
+                    if (!IsValidPhoneNumber(dbPhoneNumber))
+                    {
+                        await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Invalid phone number format", null, null);
+                        _logger.LogError("Invalid phone number format");
+                    }
+                    else
+                    {
+                        await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply] Phone number format validated.", null, null);
+                        _logger.LogInformation($"Phone number format validated.");
+                    }
+                    //Check if User exists:
+                    string email = await _dbServices.ValidateUserThroughPhone(dbPhoneNumber);
+
+                    //Validate Email
+                    if (string.IsNullOrWhiteSpace(email))
+                    {
+                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] No user found for this phone number.", null, null);
+                        _logger.LogError("No user found for this phone number.");
+                    }
+
+                    // Validate email format before proceeding
+                    if (!IsValidEmail(email))
+                    {
+                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Invalid email format associated with this phone number!", null, null);
+                        _logger.LogError("Invalid email format associated with this phone number!");
+                    }
+
+                    //check if user is opted in
+                    bool userOptedIn = await _dbServices.CheckOptInStatus(email);
+                    if (!userOptedIn)
+                    {
+                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] User already opted out.", null, null);
+                        _logger.LogError("User already opted out.");
+                    }
+
+                    //Read message
                     if (message == "OPT-OUT")
                     {
+                        // Opt out user from database table
+                        bool userOptedOut = await _dbServices.OptUserOutFromSMS(email, dbPhoneNumber);
+
+                        if (!userOptedOut)
+                        {
+                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Failed to opt user out.", null, null);
+                            _logger.LogError("Failed to opt user out.");
+                        }
+
                         string optOutMessage = "You have been successfully opted-out of notifications!";
                         if (SendSMS(senderPhoneNumber, optOutMessage))
                         {
+                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply/Opt-Out] SMS Message successfully sent!", null, null);
                             _logger.LogInformation("Opt-out confirmation SMS sent successfully.");
                         }
                         else
                         {
+                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply/Opt-Out] SMS sending failed.", null, null);
                             _logger.LogError("Failed to send opt-out confirmation SMS.");
                         }
                     }
@@ -65,26 +120,19 @@ namespace FunctionApp1
                         string helpMessage = "To opt-out of LTI Notifications, text OPT-OUT. Avoid texting STOP to stay connected. If you accidentally text STOP, follow the instructions to opt back in.";
                         if (SendSMS(senderPhoneNumber, helpMessage))
                         {
+                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply/HELP] SMS Message successfully sent!", null, null);
                             _logger.LogInformation("HELP message SMS sent successfully.");
                         }
                         else
                         {
+                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply/HELP] SMS sending failed.", null, null);
                             _logger.LogError("Failed to send HELP message SMS.");
                         }
                     }
                     else
                     {
-                        /*
-                        string debugging = $"You texted: {message}";
-                        if (SendSMS(senderPhoneNumber, debugging))
-                        {
-                            _logger.LogInformation("HELP message SMS sent successfully.");
-                        }
-                        else
-                        {
-                            _logger.LogError("Failed to send HELP message SMS.");
-                        }
-                        */
+                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "Invalid message received.", null, null);
+                        _logger.LogError("Invalid message received.");
                     }
                 }
                 else
@@ -113,6 +161,35 @@ namespace FunctionApp1
             catch (Exception ex)
             {
                 _logger.LogError($"Error sending SMS: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Helper function for validating phone numbers under Azure CS policy
+        public static bool IsValidPhoneNumber(string phoneNumber, string region = "US")
+        {
+            var phoneNumberUtil = PhoneNumbers.PhoneNumberUtil.GetInstance();
+            try
+            {
+                var parsedNumber = phoneNumberUtil.Parse(phoneNumber, region);
+                return phoneNumberUtil.IsValidNumber(parsedNumber);
+            }
+            catch (NumberParseException)
+            {
+                return false;
+            }
+        }
+
+        // Helper function for validating email format
+        public static bool IsValidEmail(string email)
+        {
+            try
+            {
+                var mailAddress = new MailAddress(email);
+                return mailAddress.Address == email; // Ensure the email is valid
+            }
+            catch (FormatException)
+            {
                 return false;
             }
         }
