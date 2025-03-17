@@ -76,6 +76,7 @@ namespace FunctionApp1
                     }
                     else
                     {
+                        /*
                         string debugging = $"You texted: {message}";
                         if (SendSMS(senderPhoneNumber, debugging))
                         {
@@ -85,6 +86,7 @@ namespace FunctionApp1
                         {
                             _logger.LogError("Failed to send HELP message SMS.");
                         }
+                        */
                     }
                 }
                 else
