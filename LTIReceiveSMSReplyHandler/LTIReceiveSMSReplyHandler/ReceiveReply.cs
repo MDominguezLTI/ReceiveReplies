@@ -9,20 +9,26 @@ using Azure.Core;
 using PhoneNumbers;
 using LTIReceiveSMSReplyHandler.Services.DataAccess;
 using System.Net.Mail;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using System.Reflection.PortableExecutable;
 
 namespace FunctionApp1
 {
     public class SMSReceiveReply
     {
         private readonly ILogger<SMSReceiveReply> _logger;
-        private readonly DatabaseServices _dbServices;
+        //private readonly DatabaseServices _dbServices;
         private readonly SmsClient _smsClient;
         private readonly string _fromNumber;
+        private readonly string _dbConnectionString;
 
-        public SMSReceiveReply(ILogger<SMSReceiveReply> logger, IConfiguration configuration, DatabaseServices dbServices)
+        public SMSReceiveReply(ILogger<SMSReceiveReply> logger, IConfiguration configuration)
         {
             _logger = logger;
-            _dbServices = dbServices;
+            _dbConnectionString = configuration["Databases.Test_Customer_Portal"];
             // Read the connection string and sender number from appsettings.json
             string connectionString = configuration["AzureCommunicationServices.ConnectionString"];
             _fromNumber = configuration["AzureCommunicationServices.FromNumber"];
@@ -67,7 +73,7 @@ namespace FunctionApp1
                         _logger.LogInformation($"Phone number format validated.");
                     }
                     //Check if User exists:
-                    string email = await _dbServices.ValidateUserThroughPhone(dbPhoneNumber);
+                    string email = await ValidateUserThroughPhone(dbPhoneNumber);
 
                     //Validate Email
                     if (string.IsNullOrWhiteSpace(email))
@@ -84,7 +90,7 @@ namespace FunctionApp1
                     }
 
                     //check if user is opted in
-                    bool userOptedIn = await _dbServices.CheckOptInStatus(email);
+                    bool userOptedIn = await CheckOptInStatus(email);
                     if (!userOptedIn)
                     {
                         //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] User already opted out.", null, null);
@@ -95,7 +101,7 @@ namespace FunctionApp1
                     if (message == "OPT-OUT")
                     {
                         // Opt out user from database table
-                        bool userOptedOut = await _dbServices.OptUserOutFromSMS(email, dbPhoneNumber);
+                        bool userOptedOut = await OptUserOutFromSMS(email, dbPhoneNumber);
 
                         if (!userOptedOut)
                         {
@@ -192,6 +198,84 @@ namespace FunctionApp1
             {
                 return false;
             }
+        }
+
+        public async Task<string?> ValidateUserThroughPhone(string phone)
+        {
+            SqlParameter pPhone = new SqlParameter("@Phone", SqlDbType.NVarChar, 20) { Value = phone };
+
+            using var connection = new SqlConnection(_dbConnectionString);
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = "EXEC dbo.CheckUserExistsForNotificationWithPhone @Phone";
+            command.CommandType = CommandType.Text;
+            command.Parameters.Add(pPhone);
+
+            using var reader = await command.ExecuteReaderAsync();
+            return reader.Read() && !reader.IsDBNull(0) ? reader.GetString(0) : null;
+        }
+
+        public async Task<bool> OptUserOutFromSMS(string email, string phone)
+        {
+            SqlParameter pEmail = new SqlParameter("@Email", SqlDbType.NVarChar, 255) { Value = email };
+            SqlParameter pPhone = new SqlParameter("@Phone", SqlDbType.NVarChar, 20) { Value = phone };
+            using var connection = new SqlConnection(_dbConnectionString);
+            using var command = connection.CreateCommand();
+            command.CommandText = "EXEC dbo.OptUserOutOfSMS @Email, @Phone";
+            command.CommandType = CommandType.Text;
+            command.Parameters.Add(pEmail);
+            command.Parameters.Add(pPhone);
+            int rowsAffected = await command.ExecuteNonQueryAsync();
+            return rowsAffected > 0;
+        }
+
+        public async Task<bool> CheckOptInStatus(string email)
+        {
+            SqlParameter pEmail = new SqlParameter("@Email", SqlDbType.NVarChar, 255) { Value = email };
+
+            using var connection = new SqlConnection(_dbConnectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "EXEC dbo.CheckOptInStatus @Email";
+            command.CommandType = CommandType.Text;
+            command.Parameters.Add(pEmail);
+
+            using var reader = command.ExecuteReader();
+            return reader.Read() && !reader.IsDBNull(0) && reader.GetBoolean(0);
+        }
+
+        public async Task LogNotificationEvent(
+            string username,
+            string fromPhoneNumber,
+            string userPreference,
+            string type,
+            string? notificationType,
+            string message,
+            string? notes,
+            string? coNum)
+        {
+            using var connection = new SqlConnection(_dbConnectionString);
+            using var command = connection.CreateCommand();
+            SqlParameter pUsername = new SqlParameter("@Username", SqlDbType.NVarChar, 255) { Value = username };
+            SqlParameter pPhoneNumber = new SqlParameter("@FromPhoneNumber", SqlDbType.NVarChar, 20) { Value = fromPhoneNumber };
+            SqlParameter pUserPreference = new SqlParameter("@UserPreference", SqlDbType.NVarChar, 50) { Value = userPreference };
+            SqlParameter pType = new SqlParameter("@Type", SqlDbType.NVarChar, 50) { Value = type };
+            SqlParameter pNotiType = new SqlParameter("@NotificationType", SqlDbType.NVarChar, 50) { Value = (object?)notificationType ?? DBNull.Value };
+            SqlParameter pMsg = new SqlParameter("@Message", SqlDbType.NVarChar, -1) { Value = (object?)message ?? DBNull.Value };
+            SqlParameter pNotes = new SqlParameter("@Notes", SqlDbType.NVarChar, -1) { Value = (object?)notes ?? DBNull.Value };
+            SqlParameter pCoNum = new SqlParameter("@CoNum", SqlDbType.NVarChar, 50) { Value = (object?)coNum ?? DBNull.Value };
+
+            command.CommandText = "EXEC dbo.LTI_Notification_Log @Username, @FromPhoneNumber, @UserPreference, @Type, @NotificationType, @Message, @Notes, @CoNum";
+            command.CommandType = CommandType.Text;
+            command.Parameters.Add(pUsername);
+            command.Parameters.Add(pPhoneNumber);
+            command.Parameters.Add(pUserPreference);
+            command.Parameters.Add(pType);
+            command.Parameters.Add(pNotiType);
+            command.Parameters.Add(pMsg);
+            command.Parameters.Add(pNotes);
+            command.Parameters.Add(pCoNum);
+            command.ExecuteNonQuery();
         }
 
         public class SmsReceivedEventData
