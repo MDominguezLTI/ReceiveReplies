@@ -51,19 +51,19 @@ namespace FunctionApp1
                     string message = smsEvent.Message?.Trim().ToUpper();
                     string dbPhoneNumber = senderPhoneNumber.Substring(2);
 
-                    await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply] Received SMS reply", null, null);
+                    //await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply] Received SMS reply", null, null);
                     _logger.LogInformation($"Received SMS from {senderPhoneNumber}: {message}");
                     
 
                     //Validating Phone Number:
                     if (!IsValidPhoneNumber(dbPhoneNumber))
                     {
-                        await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Invalid phone number format", null, null);
+                        //await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Invalid phone number format", null, null);
                         _logger.LogError("Invalid phone number format");
                     }
                     else
                     {
-                        await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply] Phone number format validated.", null, null);
+                        //await _dbServices.LogNotificationEvent("N/A", senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply] Phone number format validated.", null, null);
                         _logger.LogInformation($"Phone number format validated.");
                     }
                     //Check if User exists:
@@ -72,14 +72,14 @@ namespace FunctionApp1
                     //Validate Email
                     if (string.IsNullOrWhiteSpace(email))
                     {
-                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] No user found for this phone number.", null, null);
+                        //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] No user found for this phone number.", null, null);
                         _logger.LogError("No user found for this phone number.");
                     }
 
                     // Validate email format before proceeding
                     if (!IsValidEmail(email))
                     {
-                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Invalid email format associated with this phone number!", null, null);
+                        //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Invalid email format associated with this phone number!", null, null);
                         _logger.LogError("Invalid email format associated with this phone number!");
                     }
 
@@ -87,7 +87,7 @@ namespace FunctionApp1
                     bool userOptedIn = await _dbServices.CheckOptInStatus(email);
                     if (!userOptedIn)
                     {
-                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] User already opted out.", null, null);
+                        //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] User already opted out.", null, null);
                         _logger.LogError("User already opted out.");
                     }
 
@@ -99,19 +99,19 @@ namespace FunctionApp1
 
                         if (!userOptedOut)
                         {
-                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Failed to opt user out.", null, null);
+                            //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply] Failed to opt user out.", null, null);
                             _logger.LogError("Failed to opt user out.");
                         }
 
                         string optOutMessage = "You have been successfully opted-out of notifications!";
                         if (SendSMS(senderPhoneNumber, optOutMessage))
                         {
-                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply/Opt-Out] SMS Message successfully sent!", null, null);
+                            //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply/Opt-Out] SMS Message successfully sent!", null, null);
                             _logger.LogInformation("Opt-out confirmation SMS sent successfully.");
                         }
                         else
                         {
-                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply/Opt-Out] SMS sending failed.", null, null);
+                            //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply/Opt-Out] SMS sending failed.", null, null);
                             _logger.LogError("Failed to send opt-out confirmation SMS.");
                         }
                     }
@@ -120,18 +120,18 @@ namespace FunctionApp1
                         string helpMessage = "To opt-out of LTI Notifications, text OPT-OUT. Avoid texting STOP to stay connected. If you accidentally text STOP, follow the instructions to opt back in.";
                         if (SendSMS(senderPhoneNumber, helpMessage))
                         {
-                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply/HELP] SMS Message successfully sent!", null, null);
+                            //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "REPLY", "reply", "[AF/Reply/HELP] SMS Message successfully sent!", null, null);
                             _logger.LogInformation("HELP message SMS sent successfully.");
                         }
                         else
                         {
-                            await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply/HELP] SMS sending failed.", null, null);
+                            //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "[AF/Reply/HELP] SMS sending failed.", null, null);
                             _logger.LogError("Failed to send HELP message SMS.");
                         }
                     }
                     else
                     {
-                        await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "Invalid message received.", null, null);
+                        //await _dbServices.LogNotificationEvent(email, senderPhoneNumber, "sms", "ERROR", "reply", "Invalid message received.", null, null);
                         _logger.LogError("Invalid message received.");
                     }
                 }
