@@ -7,7 +7,6 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Azure.Core;
 using PhoneNumbers;
-using LTIReceiveSMSReplyHandler.Services.DataAccess;
 using System.Net.Mail;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
