@@ -23,12 +23,10 @@ namespace FunctionApp1
         //private readonly DatabaseServices _dbServices;
         private readonly SmsClient _smsClient;
         private readonly string _fromNumber;
-        private readonly string _dbConnectionString;
 
         public SMSReceiveReply(ILogger<SMSReceiveReply> logger, IConfiguration configuration)
         {
             _logger = logger;
-            _dbConnectionString = configuration["Databases.Test_Customer_Portal"];
             // Read the connection string and sender number from appsettings.json
             string connectionString = configuration["AzureCommunicationServices.ConnectionString"];
             _fromNumber = configuration["AzureCommunicationServices.FromNumber"];
